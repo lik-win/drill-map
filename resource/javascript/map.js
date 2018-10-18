@@ -12,7 +12,7 @@ export const initMap = function (id, type) {
   let mapConfig = {
     'crs': 'bepsg3857',
     'init_level': 5,
-    'init_center': '106.500711, 37.46694',
+    'init_center': '104.051711, 37.46694',
     'baseLayer': {
       'type': 'baidu',
       'style': 'dark'
@@ -69,19 +69,13 @@ export const initMap = function (id, type) {
 
 export const createDomMarker = function (className, data) {
   let numHtml = '';
-  if(data.num !== 0){
-    numHtml = `<span class="num">${data.num}</span>`;
-  }else{
-    numHtml = `<span class="num-no"></span>`;
-  }
   var marker = L.divIcon({
     className: `my-div-icon ${className}`,
     html: `<div>
-            ${numHtml}
             <span class="circle"></span>
             <span class="name">${data.name}</span>
           </div>`,
-    iconAnchor: [25, 23]
+    iconAnchor: [25, 3]
   });
   return L.marker(data.lnglat, {icon: marker});
 };

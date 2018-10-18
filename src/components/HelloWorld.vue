@@ -2,6 +2,7 @@
   <div class="hello">
     <l-map
       class="map"
+      ref="map"
     ></l-map>
   </div>
 </template>
@@ -14,6 +15,10 @@
     data() {
       return {
       }
+    },
+    mounted() {
+      this.map = this.$refs.map;
+      this.map.renderChinaPolygon();
     },
     components: {
       'l-map': LMap

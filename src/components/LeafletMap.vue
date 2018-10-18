@@ -9,8 +9,8 @@
     removeFeatureGroup,
     createDomMarker
   } from '../../resource/javascript/map';
-  import { provinces } from '../../resource/javascript/data/position';
-  import { chinaData } from '../../resource/javascript/data/data';
+  import {provinces} from '../../resource/javascript/data/position';
+  import {chinaData} from '../../resource/javascript/data/data';
 
   export default {
     data() {
@@ -43,7 +43,15 @@
         this.$emit('map-click');
       });
     },
+    created() {
+    },
     methods: {
+      renderChinaPolygon() {
+        let data = chinaData;
+        this.renderPolygon(data, 'provincePolygon', true);
+        this.addMarkerLayer(provinces, 'provinceMarker');
+      },
+
       renderMarker(datalist, group) {
         let data = this.getPoints(datalist, group);
         this.map.canvasLayer.setOptions(this.createCanvasLayerOptions(), group);
@@ -238,30 +246,24 @@
         }
         let layergroup = new L.layerGroup([]);
         if (!datalist) return;
+        let colors = [
+          '#90d7ec',
+          '#3991C3',
+          '#0073CD',
+          '#005AB7',
+          '#005099'
+        ];
         for (let i = 0; i < datalist.length; i++) {
           let data = datalist[i];
           let points = data.geom;
 
-           let colors = [
-             '#90d7ec',
-             '#3991C3',
-             '#0073CD',
-             '#005AB7',
-             '#005099'
-           ];
-//          let colors = ['#A1DDD5', '#00A3BA', '#4893AD', '#1D73AA', '#1D73AA'];
-
-          let curLevel = 0;
-          if (data.num) {
-            curLevel = Math.ceil(data.num / 5);
-          }
-          let color = colors[curLevel];
+          let color = colors[i % 6];
 
           let style = {
             fillColor: color,
             fillOpacity: 1,
             weight: 1,
-            color: '#1c2431',
+            color: color,
             opacity: 0.2
           };
 
@@ -277,7 +279,7 @@
             });
           });
           region.on('click', () => {
-            if (this.curLevel === 0 && data.name === '河南省') {
+            if (this.curLevel === 0) {
               let cities = provinces[i]['cities'] || provinces[i]['counties'];
               this.drillProvince(data.name, region, cities);
             }
@@ -318,7 +320,7 @@
             };
             for (let i = 0; i < _data.length; i++) {
               data.push(Object.assign({}, _data[i], {
-                num: comNum[_data[i]['name']]* 5 || 0
+                num: comNum[_data[i]['name']] * 5 || 0
               }));
             }
             this.remove([this.map.regionGroup['provinceMarker'], this.map.regionGroup['provincePolygon'], this.map.lineGroup['line']]);
@@ -476,7 +478,7 @@
         return [lnglat[1], lnglat[0]];
       }
     }
-  }
+  };
 </script>
 <style lang="less">
   #LeafletMap {
@@ -511,20 +513,7 @@
     height: 53px !important;
     text-align: center;
     color: #fff;
-    /*background: red;*/
-    .num,
-    .num-no {
-      display: block;
-      width: 20px;
-      height: 20px;
-      margin: 0 auto 3px;
-      border-radius: 50%;
-      line-height: 20px;
-    }
-    .num {
-      background: #f30;
-    }
-    .name{
+    .name {
       font-weight: bold;
     }
     .circle {

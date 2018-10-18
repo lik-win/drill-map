@@ -1,4 +1,4 @@
-var provinces = [
+export const provinces = [
     {
         "name": "北京市",
         "lng": "116.413912",
