@@ -12,7 +12,8 @@ export const baseConfig = {
     '#09A3BC',
     '#A5DDD5'
   ],
-  showCounty: true,
+  hoverColor: '#00FFFE',
+  mapFromLevel: 1,
   map: {
     level: 5,
     center: '104.051711, 37.46694'

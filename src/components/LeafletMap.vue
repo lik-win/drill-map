@@ -92,7 +92,7 @@
           let region = L.geoJSON(points, style);
           region.on('mouseover', () => {
             region.setStyle({
-              fillColor: '#00FFFE',
+              fillColor: baseConfig.hoverColor,
             });
           });
           region.on('mouseout', () => {
@@ -116,18 +116,21 @@
         if (this.curLevel === 0) {
           // 全国 => 省
           this.curLevel = 1;
-          this.drillDown(data, this.curLevel);
           this.provinceFitBoundsRegion = region;
         } else if (this.curLevel === 1) {
           // 省 => 市
-          this.curLevel = 2;
-          this.drillDown(data, this.curLevel);
-          this.cityFitBoundsRegion = region;
+          if(baseConfig.mapFromLevel === 1){
+            this.curLevel = 3;
+            this.showTile();
+          }else if(baseConfig.mapFromLevel === 2){
+            this.curLevel = 2;
+            this.cityFitBoundsRegion = region;
+          }
         } else if (this.curLevel === 2) {
           this.curLevel = 3;
-          this.drillDown(data, this.curLevel);
           this.showTile();
         }
+        this.drillDown(data, this.curLevel);
         this.fitBounds(region);
       },
       drillDown(data, level) {
@@ -147,11 +150,21 @@
             showMarker: 'countyMarker',
           }
         } else if (level === 3) {
-          group = {
-            hidePolygon: 'countyPolygon',
-            hideMarker: 'countyMarker',
-          };
-          this.renderPolygon([data], 'tilePolygon', true);
+          if(baseConfig.mapFromLevel === 1){
+            group = {
+              hidePolygon: 'cityPolygon',
+              hideMarker: 'cityMarker',
+              showPolygon: 'countyPolygon',
+              showMarker: 'countyMarker',
+            }
+            this.renderPolygon([data], 'tilePolygon', true);
+          }else if(baseConfig.mapFromLevel === 2){
+            group = {
+              hidePolygon: 'countyPolygon',
+              hideMarker: 'countyMarker',
+            };
+            this.renderPolygon([data], 'tilePolygon', true);
+          }
         }
         this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
         if(level === 3) return;
@@ -194,15 +207,26 @@
           this.curLevel = 1;
           this.fitBounds(this.provinceFitBoundsRegion);
         } else if (level === 3) {
-          group = {
-            hidePolygon: 'tilePolygon',
-            hideMarker: '',
-            showPolygon: 'countyPolygon',
-            showMarker: 'countyMarker',
-          };
-          this.curLevel = 2;
+          if(baseConfig.mapFromLevel === 1){
+            group = {
+              hidePolygon: 'tilePolygon',
+              hideMarker: '',
+              showPolygon: 'cityPolygon',
+              showMarker: 'cityMarker',
+            };
+            this.curLevel = 1;
+            this.fitBounds(this.provinceFitBoundsRegion);
+          }else if(baseConfig.mapFromLevel === 2){
+            group = {
+              hidePolygon: 'tilePolygon',
+              hideMarker: '',
+              showPolygon: 'countyPolygon',
+              showMarker: 'countyMarker',
+            };
+            this.curLevel = 2;
+            this.fitBounds(this.cityFitBoundsRegion);
+          }
           this.hideTile();
-          this.fitBounds(this.cityFitBoundsRegion);
         }
         this.add([this.map.regionGroup[group['showPolygon']], this.map.regionGroup[group['showMarker']]]);
         this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
