@@ -3,6 +3,7 @@
 </template>
 <script>
   import _ from 'lodash';
+  import {baseConfig} from "../../resource/javascript/config.default";
   import {
     initMap,
     addFeatureGroup,
@@ -16,7 +17,9 @@
     data() {
       return {
         map: null,
-        curLevel: 0, // 全国 0， 省 1
+        curLevel: 0, // 全国 0， 省 1, 市 2，县 3， 地图 4
+        provinceFitBoundsRegion: null,
+        cityFitBoundsRegion: null,
         polylineClickTime: null,
         polygonClickTime: null,
         activeFeature: null,
@@ -43,25 +46,176 @@
         this.$emit('map-click');
       });
     },
-    created() {
-    },
     methods: {
       renderChinaPolygon() {
         let data = chinaData;
         this.renderPolygon(data, 'provincePolygon', true);
         this.addMarkerLayer(provinces, 'provinceMarker');
+        this.curLevel = 0;
       },
 
-      renderMarker(datalist, group) {
-        let data = this.getPoints(datalist, group);
-        this.map.canvasLayer.setOptions(this.createCanvasLayerOptions(), group);
-        this.map.canvasLayer.setData(data, group);
+      // 区域
+      renderPolygon(datalist, group, isRerender) {
+        let map = this.map;
+        if (!isRerender && map.regionGroup[group]) {
+          map.regionGroup[group].addTo(map);
+          return;
+        }
+        let layergroup = new L.layerGroup([]);
+        if (!datalist) return;
+        let colors = baseConfig.colors;
+        for (let i = 0; i < datalist.length; i++) {
+          let data = datalist[i];
+          let points = data.geom;
+
+          let color = colors[i % colors.length];
+
+          let style = {};
+          if (this.curLevel !== 3) {
+            style = {
+              fillColor: color,
+              fillOpacity: 1,
+              weight: 1,
+              color: color,
+              opacity: 0.2
+            };
+          } else {
+            style = {
+              fillColor: '',
+              fillOpacity: 0,
+              weight: 3,
+              color: '#000',
+              opacity: 0.8
+            };
+          }
+
+          let region = L.geoJSON(points, style);
+          region.on('mouseover', () => {
+            region.setStyle({
+              fillColor: '#00FFFE',
+            });
+          });
+          region.on('mouseout', () => {
+            region.setStyle({
+              fillColor: color,
+            });
+          });
+          region.on('click', () => {
+            this.drill(data, region);
+          });
+          region.on('contextmenu', () => {
+            this.drillUp();
+            return false;
+          });
+          layergroup.addLayer(region);
+        }
+        layergroup.addTo(map);
+        map.regionGroup[group] = layergroup;
       },
-      hideMarkerGroup(group) {
-        this.map.canvasLayer.clearData(group);
+      drill(data, region) {
+        if (this.curLevel === 0) {
+          // 全国 => 省
+          this.curLevel = 1;
+          this.drillDown(data, this.curLevel);
+          this.provinceFitBoundsRegion = region;
+        } else if (this.curLevel === 1) {
+          // 省 => 市
+          this.curLevel = 2;
+          this.drillDown(data, this.curLevel);
+          this.cityFitBoundsRegion = region;
+        } else if (this.curLevel === 2) {
+          this.curLevel = 3;
+          this.drillDown(data, this.curLevel);
+          this.showTile();
+        }
+        this.fitBounds(region);
       },
+      drillDown(data, level) {
+        let group = {};
+        if (level === 1) {
+          group = {
+            hidePolygon: 'provincePolygon',
+            hideMarker: 'provinceMarker',
+            showPolygon: 'cityPolygon',
+            showMarker: 'cityMarker',
+          }
+        } else if (level === 2) {
+          group = {
+            hidePolygon: 'cityPolygon',
+            hideMarker: 'cityMarker',
+            showPolygon: 'countyPolygon',
+            showMarker: 'countyMarker',
+          }
+        } else if (level === 3) {
+          group = {
+            hidePolygon: 'countyPolygon',
+            hideMarker: 'countyMarker',
+          };
+          this.renderPolygon([data], 'tilePolygon', true);
+        }
+        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
+        if(level === 3) return;
+        let url = `https://data.dituwuyou.com/biz/district/search?name=${data.name}&level=${level}&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
+        this.$axios.get(url)
+          .then(async (res) => {
+            if (res.data.data.length > 0 && res.data.data[0].children) {
+              let data = res.data.data[0].children;
+              this.renderPolygon(data, group['showPolygon'], true);
+              for (let i = 0; i < data.length; i++) {
+                let location = await this.getLocation(res.data.data[0]['name'], data[i].name);
+                data[i]['lng'] = location['lng'];
+                data[i]['lat'] = location['lat'];
+              }
+              this.addMarkerLayer(data, group['showMarker']);
+            }
+          });
+      },
+      drillUp() {
+        let level = this.curLevel;
+        let group = {};
+        if (level === 1) {
+          group = {
+            hidePolygon: 'cityPolygon',
+            hideMarker: 'cityMarker',
+            showPolygon: 'provincePolygon',
+            showMarker: 'provinceMarker',
+          };
+          this.map.flyTo([37.46694, 104.051711], 5, {
+            duration: 0.5,
+          });
+          this.curLevel = 0;
+        } else if (level === 2) {
+          group = {
+            hidePolygon: 'countyPolygon',
+            hideMarker: 'countyMarker',
+            showPolygon: 'cityPolygon',
+            showMarker: 'cityMarker',
+          };
+          this.curLevel = 1;
+          this.fitBounds(this.provinceFitBoundsRegion);
+        } else if (level === 3) {
+          group = {
+            hidePolygon: 'tilePolygon',
+            hideMarker: '',
+            showPolygon: 'countyPolygon',
+            showMarker: 'countyMarker',
+          };
+          this.curLevel = 2;
+          this.hideTile();
+          this.fitBounds(this.cityFitBoundsRegion);
+        }
+        this.add([this.map.regionGroup[group['showPolygon']], this.map.regionGroup[group['showMarker']]]);
+        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
+      },
+      showTile() {
+        document.getElementsByClassName('leaflet-layer')[0].style.display = 'block';
+      },
+      hideTile() {
+        document.getElementsByClassName('leaflet-layer')[0].style.display = 'none';
+      },
+
+      // 坐标点
       addMarkerLayer(datalist, group) {
-        document.getElementsByClassName('leaflet-marker-pane')[0].innerHTML = '';
         let layergroup = new L.layerGroup([]);
         for (let i = 0; i < datalist.length; i++) {
           let data = datalist[i];
@@ -139,6 +293,91 @@
             }
           }
         };
+      },
+      // 查询百度坐标
+      async getLocation(city, address) {
+        let url = '/api/geocoder/v2/';
+        let params = {
+          ak: 'xlbBFeF4xY3v9wbLNSPRqMFYvggSU7Mu',
+          output: 'json',
+          city: city,
+          address: address
+        };
+        let res = await this.$axios.get(url, {params});
+        if (res && res.status === 200 && res.data.status === 0) {
+          return res.data.result.location;
+        }
+      },
+      // 大小变化重新渲染
+      resize() {
+        this.map.invalidateSize();
+      },
+      fitBounds(layer) {
+        if (layer) {
+          this.map.fitBounds(layer.getBounds());
+        } else {
+          this.map.fitBounds();
+        }
+      },
+      add(layers) {
+        if (_.isArray(layers)) {
+          for (let i in layers) {
+            addFeatureGroup(layers[i]);
+          }
+        } else if (_.isObject(layers)) {
+          addFeatureGroup(layers);
+        }
+      },
+      remove(layers) {
+        if (_.isArray(layers)) {
+          for (let i in layers) {
+            removeFeatureGroup(layers[i]);
+          }
+        } else if (_.isObject(layers)) {
+          removeFeatureGroup(layers);
+        }
+      },
+
+      drillProvince(name) {
+        this.curLevel = 1;
+        let url = `https://data.dituwuyou.com/biz/district/search?name=${name}&level=1&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
+        this.$axios.get(url)
+          .then(async (res) => {
+            let data = res.data.data[0].children;
+            this.hideRegionGroup('provincePolygon');
+            this.hideMarkerGroup('provinceMarker');
+            this.renderPolygon(data, 'citiesPolygon', true);
+            for (let i = 0; i < data.length; i++) {
+              let location = await this.getLocation(res.data.data[0]['name'], data[i].name);
+              data[i]['lng'] = location['lng'];
+              data[i]['lat'] = location['lat'];
+            }
+            this.addMarkerLayer(data, 'cities');
+          });
+      },
+      drillCity(name) {
+        let url = `https://data.dituwuyou.com/biz/district/search?name=${name}&level=2&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
+        this.$axios.get(url)
+          .then(async (res) => {
+            let data = res.data.data[0].children;
+            this.remove([this.map.regionGroup['citiesMarker'], this.map.regionGroup['citiesPolygon']]);
+            this.renderPolygon(data, 'countiesPolygon', true);
+            for (let i = 0; i < data.length; i++) {
+              let location = await this.getLocation(res.data.data[0]['name'], data[i].name);
+              data[i]['lng'] = location['lng'];
+              data[i]['lat'] = location['lat'];
+            }
+            this.addMarkerLayer(data, 'county');
+          });
+      },
+
+      renderMarker(datalist, group) {
+        let data = this.getPoints(datalist, group);
+        this.map.canvasLayer.setOptions(this.createCanvasLayerOptions(), group);
+        this.map.canvasLayer.setData(data, group);
+      },
+      hideMarkerGroup(group) {
+        this.map.canvasLayer.clearData(group);
       },
       clearSelectMarekr() { // 清除选择点位
         if (this.activeFeature) {
@@ -237,101 +476,6 @@
         removeFeatureGroup(this.map.lineGroup[group]);
       },
 
-      // 区域
-      renderPolygon(datalist, group, isRerender) {
-        let map = this.map;
-        if (!isRerender && map.regionGroup[group]) {
-          map.regionGroup[group].addTo(map);
-          return;
-        }
-        let layergroup = new L.layerGroup([]);
-        if (!datalist) return;
-        let colors = [
-          '#90d7ec',
-          '#3991C3',
-          '#0073CD',
-          '#005AB7',
-          '#005099'
-        ];
-        for (let i = 0; i < datalist.length; i++) {
-          let data = datalist[i];
-          let points = data.geom;
-
-          let color = colors[i % 6];
-
-          let style = {
-            fillColor: color,
-            fillOpacity: 1,
-            weight: 1,
-            color: color,
-            opacity: 0.2
-          };
-
-          let region = L.geoJSON(points, style);
-          region.on('mouseover', () => {
-            region.setStyle({
-              fillColor: '#00FFFE',
-            });
-          });
-          region.on('mouseout', () => {
-            region.setStyle({
-              fillColor: color,
-            });
-          });
-          region.on('click', () => {
-            if (this.curLevel === 0) {
-              let cities = provinces[i]['cities'] || provinces[i]['counties'];
-              this.drillProvince(data.name, region, cities);
-            }
-          });
-          region.on('contextmenu', () => {
-            this.curLevel = 0;
-            this.addMarkerLayer(provinces, 'provinceMarker');
-            let data = chinaData.data;
-            this.renderPolygon(data, 'provincePolygon', false);
-            this.remove([this.map.regionGroup['province'], this.map.lineGroup['henanline']]);
-            this.map.flyTo([37.46694, 106.500711], 5, {
-              duration: 0.3,
-            });
-            this.$emit('changeData', 'china');
-            this.renderPolyline(chinaGasLine, 'line', false);
-            return false;
-          });
-          layergroup.addLayer(region);
-        }
-        layergroup.addTo(map);
-        map.regionGroup[group] = layergroup;
-      },
-      drillProvince(name, region, cities) {
-        this.curLevel = 1;
-        let url = `https://data.dituwuyou.com/biz/district/search?name=${name}&level=1&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
-        this.$axios.get(url)
-          .then((res) => {
-            let _data = res.data.data[0].children;
-            let data = [];
-            let comNum = {
-              "郑州市": 2,
-              "洛阳市": 1,
-              "新乡市": 2,
-              "焦作市": 4,
-              "漯河市": 1,
-              "三门峡市": 2,
-              "商丘市": 1
-            };
-            for (let i = 0; i < _data.length; i++) {
-              data.push(Object.assign({}, _data[i], {
-                num: comNum[_data[i]['name']] * 5 || 0
-              }));
-            }
-            this.remove([this.map.regionGroup['provinceMarker'], this.map.regionGroup['provincePolygon'], this.map.lineGroup['line']]);
-            this.renderPolygon(data, 'province', true);
-            this.$emit('changeData', 'henan');
-            this.renderPolyline(henanGasLine, 'henanline', false);
-            this.addMarkerLayer(cities, 'cityMarker');
-            this.fitBounds(region);
-          });
-      },
-
       hideRegionGroup(group) { // 隐藏区域
         removeFeatureGroup(this.map.regionGroup[group]);
       },
@@ -406,17 +550,6 @@
         }
       },
 
-      // 大小变化重新渲染
-      resize() {
-        this.map.invalidateSize();
-      },
-      fitBounds(layer) {
-        if (layer) {
-          this.map.fitBounds(layer.getBounds());
-        } else {
-          this.map.fitBounds();
-        }
-      },
       fitBoundsArray(arr) {
         if (arr) {
           this.map.flyToBounds(arr, {
@@ -452,24 +585,6 @@
           lat: center[1],
           lng: center[0]
         };
-      },
-      add(layers) {
-        if (_.isArray(layers)) {
-          for (let i in layers) {
-            addFeatureGroup(layers[i]);
-          }
-        } else if (_.isObject(layers)) {
-          addFeatureGroup(layers);
-        }
-      },
-      remove(layers) {
-        if (_.isArray(layers)) {
-          for (let i in layers) {
-            removeFeatureGroup(layers[i]);
-          }
-        } else if (_.isObject(layers)) {
-          removeFeatureGroup(layers);
-        }
       },
       lnglats2latlngs(lnglat) {
         if (!lnglat || lnglat.length < 2) {

@@ -2,7 +2,7 @@ import './load.js';
 
 import '../stylesheets/leaflet/leaflet.css';
 
-import Vue from 'vue';
+import { baseConfig } from "./config.default";
 
 /**
  * 初始化地图
@@ -11,11 +11,11 @@ export let map = null;
 export const initMap = function (id, type) {
   let mapConfig = {
     'crs': 'bepsg3857',
-    'init_level': 5,
-    'init_center': '104.051711, 37.46694',
+    'init_level': baseConfig.map.level,
+    'init_center': baseConfig.map.center,
     'baseLayer': {
       'type': 'baidu',
-      'style': 'dark'
+      'style': 'normal'
     }
   };
   let definedCRSs = {
