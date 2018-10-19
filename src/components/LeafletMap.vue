@@ -47,7 +47,7 @@
       });
       this.map.on('zoomend zoomlevelschange', () => {
         let curZoom = this.map.getZoom();
-        if ((this.curLevel === 3 && curZoom < 9) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
+        if ((this.curLevel === 3 && curZoom < 8) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
           this.drillUp();
         }
         if (curZoom < 5) {
@@ -124,6 +124,7 @@
         map.regionGroup[group] = layergroup;
       },
       drill(data, region) {
+        this.removeGroup(this.map.regionGroup);
         if (this.curLevel === 0) {
           // 全国 => 省
           this.curLevel = 1;
@@ -177,7 +178,7 @@
             this.renderPolygon([data], 'tilePolygon', true);
           }
         }
-        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
+//        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
         if (level === 3) return;
         let url = `https://data.dituwuyou.com/biz/district/search?name=${data.name}&level=${level}&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
         this.$axios.get(url)
@@ -195,6 +196,7 @@
           });
       },
       drillUp() {
+        this.removeGroup(this.map.regionGroup);
         let level = this.curLevel;
         let group = {};
         if (level === 1) {
@@ -240,7 +242,7 @@
           this.hideTile();
         }
         this.add([this.map.regionGroup[group['showPolygon']], this.map.regionGroup[group['showMarker']]]);
-        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
+//        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
       },
       showTile() {
         document.getElementsByClassName('leaflet-layer')[0].style.display = 'block';
@@ -370,6 +372,11 @@
           }
         } else if (_.isObject(layers)) {
           removeFeatureGroup(layers);
+        }
+      },
+      removeGroup(layers) {
+        for (let key in layers) {
+          removeFeatureGroup(layers[key]);
         }
       },
 
