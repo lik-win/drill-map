@@ -124,6 +124,7 @@
         map.regionGroup[group] = layergroup;
       },
       drill(data, region) {
+        console.log(this.map.regionGroup);
         this.removeGroup(this.map.regionGroup);
         if (this.curLevel === 0) {
           // 全国 => 省
@@ -149,31 +150,23 @@
         let group = {};
         if (level === 1) {
           group = {
-            hidePolygon: 'provincePolygon',
-            hideMarker: 'provinceMarker',
             showPolygon: 'cityPolygon',
             showMarker: 'cityMarker',
           }
         } else if (level === 2) {
           group = {
-            hidePolygon: 'cityPolygon',
-            hideMarker: 'cityMarker',
             showPolygon: 'countyPolygon',
             showMarker: 'countyMarker',
           }
         } else if (level === 3) {
           if (baseConfig.mapFromLevel === 1) {
             group = {
-              hidePolygon: 'cityPolygon',
-              hideMarker: 'cityMarker',
               showPolygon: 'countyPolygon',
               showMarker: 'countyMarker',
             }
             this.renderPolygon([data], 'tilePolygon', true);
           } else if (baseConfig.mapFromLevel === 2) {
             group = {
-              hidePolygon: 'countyPolygon',
-              hideMarker: 'countyMarker',
             };
             this.renderPolygon([data], 'tilePolygon', true);
           }
@@ -183,15 +176,20 @@
         let url = `https://data.dituwuyou.com/biz/district/search?name=${data.name}&level=${level}&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
         this.$axios.get(url)
           .then(async (res) => {
-            if (res.data.data.length > 0 && res.data.data[0].children) {
-              let data = res.data.data[0].children;
-              this.renderPolygon(data, group['showPolygon'], true);
-              for (let i = 0; i < data.length; i++) {
-                let location = await this.getLocation(res.data.data[0]['name'], data[i].name);
-                data[i]['lng'] = location['lng'];
-                data[i]['lat'] = location['lat'];
+            if (res.data.success && res.data.data.length > 0 && res.data.data[0].children) {
+              let childrenData = res.data.data[0].children;
+              this.renderPolygon(childrenData, group['showPolygon'], true);
+              for (let i = 0; i < childrenData.length; i++) {
+                let location = await this.getLocation(res.data.data[0]['name'], childrenData[i].name);
+                if(!location) continue;
+                childrenData[i]['lng'] = location['lng'];
+                childrenData[i]['lat'] = location['lat'];
               }
-              this.addMarkerLayer(data, group['showMarker']);
+              this.addMarkerLayer(childrenData, group['showMarker']);
+            }else{
+              this.curLevel = 3;
+              this.showTile();
+              this.renderPolygon([data], 'tilePolygon', true);
             }
           });
       },
@@ -201,8 +199,6 @@
         let group = {};
         if (level === 1) {
           group = {
-            hidePolygon: 'cityPolygon',
-            hideMarker: 'cityMarker',
             showPolygon: 'provincePolygon',
             showMarker: 'provinceMarker',
           };
@@ -212,8 +208,6 @@
           this.curLevel = 0;
         } else if (level === 2) {
           group = {
-            hidePolygon: 'countyPolygon',
-            hideMarker: 'countyMarker',
             showPolygon: 'cityPolygon',
             showMarker: 'cityMarker',
           };
@@ -222,8 +216,6 @@
         } else if (level === 3) {
           if (baseConfig.mapFromLevel === 1) {
             group = {
-              hidePolygon: 'tilePolygon',
-              hideMarker: '',
               showPolygon: 'cityPolygon',
               showMarker: 'cityMarker',
             };
@@ -231,8 +223,6 @@
             this.fitBounds(this.provinceFitBoundsRegion);
           } else if (baseConfig.mapFromLevel === 2) {
             group = {
-              hidePolygon: 'tilePolygon',
-              hideMarker: '',
               showPolygon: 'countyPolygon',
               showMarker: 'countyMarker',
             };
@@ -257,6 +247,7 @@
         for (let i = 0; i < datalist.length; i++) {
           let data = datalist[i];
           let className = `my-icon-${i}`;
+          if(!data.lat || !data.lng) continue;
           data.lnglat = [data.lat, data.lng];
           let marker = createDomMarker(className, data);
           layergroup.addLayer(marker);
