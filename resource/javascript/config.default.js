@@ -13,7 +13,7 @@ export const baseConfig = {
     '#A5DDD5'
   ],
   hoverColor: '#00FFFE',
-  mapFromLevel: 1,
+  mapFromLevel: 2, // 1 市 => 地图；2 县 => 地图
   map: {
     level: 5,
     center: '104.051711, 37.46694'

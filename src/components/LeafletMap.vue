@@ -45,6 +45,17 @@
         this.clearSelectPolyline();
         this.$emit('map-click');
       });
+      this.map.on('zoomend zoomlevelschange', () => {
+        let curZoom = this.map.getZoom();
+        if ((this.curLevel === 3 && curZoom < 9) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
+          this.drillUp();
+        }
+        if (curZoom < 5) {
+          this.map.flyTo([37.46694, 104.051711], 5, {
+            duration: 0.5,
+          });
+        }
+      });
     },
     methods: {
       renderChinaPolygon() {
@@ -119,10 +130,10 @@
           this.provinceFitBoundsRegion = region;
         } else if (this.curLevel === 1) {
           // 省 => 市
-          if(baseConfig.mapFromLevel === 1){
+          if (baseConfig.mapFromLevel === 1) {
             this.curLevel = 3;
             this.showTile();
-          }else if(baseConfig.mapFromLevel === 2){
+          } else if (baseConfig.mapFromLevel === 2) {
             this.curLevel = 2;
             this.cityFitBoundsRegion = region;
           }
@@ -150,7 +161,7 @@
             showMarker: 'countyMarker',
           }
         } else if (level === 3) {
-          if(baseConfig.mapFromLevel === 1){
+          if (baseConfig.mapFromLevel === 1) {
             group = {
               hidePolygon: 'cityPolygon',
               hideMarker: 'cityMarker',
@@ -158,7 +169,7 @@
               showMarker: 'countyMarker',
             }
             this.renderPolygon([data], 'tilePolygon', true);
-          }else if(baseConfig.mapFromLevel === 2){
+          } else if (baseConfig.mapFromLevel === 2) {
             group = {
               hidePolygon: 'countyPolygon',
               hideMarker: 'countyMarker',
@@ -167,7 +178,7 @@
           }
         }
         this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
-        if(level === 3) return;
+        if (level === 3) return;
         let url = `https://data.dituwuyou.com/biz/district/search?name=${data.name}&level=${level}&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
         this.$axios.get(url)
           .then(async (res) => {
@@ -207,7 +218,7 @@
           this.curLevel = 1;
           this.fitBounds(this.provinceFitBoundsRegion);
         } else if (level === 3) {
-          if(baseConfig.mapFromLevel === 1){
+          if (baseConfig.mapFromLevel === 1) {
             group = {
               hidePolygon: 'tilePolygon',
               hideMarker: '',
@@ -216,7 +227,7 @@
             };
             this.curLevel = 1;
             this.fitBounds(this.provinceFitBoundsRegion);
-          }else if(baseConfig.mapFromLevel === 2){
+          } else if (baseConfig.mapFromLevel === 2) {
             group = {
               hidePolygon: 'tilePolygon',
               hideMarker: '',
