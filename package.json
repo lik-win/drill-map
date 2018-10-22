@@ -12,6 +12,7 @@
   "dependencies": {
     "ajv": "^6.5.4",
     "axios": "^0.18.0",
+    "fs": "0.0.1-security",
     "less": "^3.8.1",
     "less-loader": "^4.1.0",
     "script-loader": "^0.7.2",
