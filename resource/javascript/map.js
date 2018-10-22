@@ -68,12 +68,11 @@ export const initMap = function (id, type) {
 };
 
 export const createDomMarker = function (className, data) {
-  let numHtml = '';
   var marker = L.divIcon({
     className: `my-div-icon ${className}`,
     html: `<div>
-            <span class="circle"></span>
-            <span class="name">${data.name}</span>
+            <span class="circle" style="background: ${baseConfig.citiesMarkerCircleColor}"></span>
+            <span class="name" style="color: ${baseConfig.citiesMarkerNameColor}">${data.name}</span>
           </div>`,
     iconAnchor: [25, 3]
   });

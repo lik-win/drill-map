@@ -20,7 +20,8 @@
         curLevel: 0, // 全国 0， 省 1, 市 2，县 3， 地图 4
         provinceFitBoundsRegion: null,
         cityFitBoundsRegion: null,
-        allLevel: 0
+        allLevel: 0,
+        drillZoom: null
       };
     },
     mounted() {
@@ -35,15 +36,18 @@
       this.map.on('click', (e) => {
         this.$emit('map-click');
       });
-      this.map.on('zoomend zoomlevelschange', () => {
+      this.map.on('zoomend', () => {
         let curZoom = this.map.getZoom();
-        /*if ((this.curLevel === 3 && curZoom < 8) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
-          this.drillUp();
-        }*/
         if (this.curLevel === 0 && curZoom < 5) {
           this.map.flyTo([37.46694, 104.051711], 5, {
             duration: 0.5,
           });
+        }
+        console.log(this.drillZoom, curZoom);
+        if(this.drillZoom >= curZoom){
+          if ((this.curLevel === 3 && curZoom < 8) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
+            this.drillUp();
+          }
         }
       });
     },
@@ -51,7 +55,9 @@
       renderChinaPolygon() {
         let data = chinaData;
         this.renderPolygon(data, 'provincePolygon', true);
-        this.addMarkerLayer(provinces, 'provinceMarker');
+        if (baseConfig.citiesMarkerShow) {
+          this.addMarkerLayer(provinces, 'provinceMarker');
+        }
         this.curLevel = 0;
       },
       // 区域
@@ -92,7 +98,7 @@
           let region = L.geoJSON(points, style);
           region.on('mouseover', () => {
             region.setStyle({
-              fillColor: baseConfig.hoverColor,
+              fillColor: baseConfig.hoverColor || '#00FFFE',
             });
           });
           region.on('mouseout', () => {
@@ -135,6 +141,7 @@
         this.fitBounds(region);
       },
       drillDown(data, level) {
+        this.drillZoom = this.map.getZoom();
         let group = {};
         if (level === 1) {
           group = {
@@ -157,7 +164,6 @@
           }
           this.renderPolygon([data], 'tilePolygon', true);
         }
-//        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
         if (level === 3) return;
         let url = `https://data.dituwuyou.com/biz/district/search?name=${data.name}&level=${level}&sub=1&polygon=true&subPolygon=true&provinceScale=0.12&cityScale=0.12&countyScale=0.12`;
         this.$axios.get(url)
@@ -167,16 +173,18 @@
               this.renderPolygon(childrenData, group['showPolygon'], true);
               for (let i = 0; i < childrenData.length; i++) {
                 let location = await this.getLocation(res.data.data[0]['name'], childrenData[i].name);
-                if(!location) continue;
+                if (!location) continue;
                 childrenData[i]['lng'] = location['lng'];
                 childrenData[i]['lat'] = location['lat'];
               }
-              this.addMarkerLayer(childrenData, group['showMarker']);
+              if (baseConfig.citiesMarkerShow) {
+                this.addMarkerLayer(childrenData, group['showMarker']);
+              }
               this.allLevel = 0;
-            }else{
-              if(level === 1){
+            } else {
+              if (level === 1) {
                 this.allLevel = 2;
-              }else if(level === 2){
+              } else if (level === 2) {
                 this.allLevel = 3;
               }
               this.curLevel = 3;
@@ -186,9 +194,10 @@
           });
       },
       drillUp() {
+        let level = this.curLevel;
+        if (level === 0) return;
         this.removeGroup(this.map.regionGroup);
         this.hideTile();
-        let level = this.curLevel;
         let group = {};
         if (level === 1 || this.allLevel === 2) {
           group = {
@@ -224,7 +233,6 @@
           }
         }
         this.add([this.map.regionGroup[group['showPolygon']], this.map.regionGroup[group['showMarker']]]);
-//        this.remove([this.map.regionGroup[group['hidePolygon']], this.map.regionGroup[group['hideMarker']]]);
       },
       showTile() {
         document.getElementsByClassName('leaflet-layer')[0].style.display = 'block';
@@ -238,7 +246,7 @@
         for (let i = 0; i < datalist.length; i++) {
           let data = datalist[i];
           let className = `my-icon-${i}`;
-          if(!data.lat || !data.lng) continue;
+          if (!data.lat || !data.lng) continue;
           data.lnglat = [data.lat, data.lng];
           let marker = createDomMarker(className, data);
           layergroup.addLayer(marker);
@@ -274,10 +282,14 @@
       add(layers) {
         if (_.isArray(layers)) {
           for (let i in layers) {
-            addFeatureGroup(layers[i]);
+            if (layers[i]) {
+              addFeatureGroup(layers[i]);
+            }
           }
         } else if (_.isObject(layers)) {
-          addFeatureGroup(layers);
+          if (layers) {
+            addFeatureGroup(layers);
+          }
         }
       },
       remove(layers) {
@@ -301,28 +313,6 @@
   #LeafletMap {
     background-color: #1c2431;
     z-index: 990;
-  }
-
-  .marker_sign {
-    width: 16px;
-    height: 16px;
-    text-align: center;
-    line-height: 16px;
-    border-radius: 50%;
-    color: #fff;
-  }
-
-  .map-echarts-pie-tooltip {
-    z-index: 9999;
-    td {
-      padding: 0 3px;
-    }
-    .map-echarts-span {
-      width: 30px;
-      height: 14px;
-      border-radius: 5px;
-      display: inline-block;
-    }
   }
 
   .my-div-icon {
