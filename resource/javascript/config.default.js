@@ -1,4 +1,5 @@
 export const baseConfig = {
+  tileShow: false,
   colors:[
     '#90d7ec',
     '#3991C3',
@@ -15,7 +16,7 @@ export const baseConfig = {
   citiesMarkerShow: true,
   citiesMarkerNameColor: '#fff', // 默认：#fff
   citiesMarkerCircleColor: '#fff', // 默认：#fff
-  hoverColor: '#00FFFE', // 默认：#00FFFE
+  hoverColor: '', // 默认：#00FFFE
   mapFromLevel: 2, // 0 省 => 地图； 1 市 => 地图；2 县 => 地图
   map: {
     level: 5,

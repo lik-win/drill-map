@@ -172,13 +172,13 @@
             if (res.data.success && res.data.data.length > 0 && res.data.data[0].children) {
               let childrenData = res.data.data[0].children;
               this.renderPolygon(childrenData, group['showPolygon'], true);
-              for (let i = 0; i < childrenData.length; i++) {
-                let location = await this.getLocation(res.data.data[0]['name'], childrenData[i].name);
-                if (!location) continue;
-                childrenData[i]['lng'] = location['lng'];
-                childrenData[i]['lat'] = location['lat'];
-              }
               if (baseConfig.citiesMarkerShow) {
+                for (let i = 0; i < childrenData.length; i++) {
+                  let location = await this.getLocation(res.data.data[0]['name'], childrenData[i].name);
+                  if (!location) continue;
+                  childrenData[i]['lng'] = location['lng'];
+                  childrenData[i]['lat'] = location['lat'];
+                }
                 this.addMarkerLayer(childrenData, group['showMarker']);
               }
               this.allLevel = 0;
@@ -240,7 +240,9 @@
         document.getElementsByClassName('leaflet-layer')[0].style.display = 'block';
       },
       hideTile() {
-        document.getElementsByClassName('leaflet-layer')[0].style.display = 'none';
+        if(!baseConfig.tileShow){
+          document.getElementsByClassName('leaflet-layer')[0].style.display = 'none';
+        }
       },
       // 坐标点
       addMarkerLayer(datalist, group) {

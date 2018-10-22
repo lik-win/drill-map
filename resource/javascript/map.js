@@ -63,7 +63,9 @@ export const initMap = function (id, type) {
     'position': mapOptions['zoomPosition'], 'zoomInTitle': '放大', 'zoomOutTitle': '缩小'
   }).addTo(map);*/
   // 隐藏底图
-  document.getElementsByClassName('leaflet-layer')[0].style.display = 'none';
+  if(!baseConfig.tileShow){
+    document.getElementsByClassName('leaflet-layer')[0].style.display = 'none';
+  }
   return map;
 };
 
