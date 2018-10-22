@@ -21,7 +21,7 @@
         provinceFitBoundsRegion: null,
         cityFitBoundsRegion: null,
         allLevel: 0,
-        drillZoom: null
+        drillZoom: []
       };
     },
     mounted() {
@@ -43,11 +43,8 @@
             duration: 0.5,
           });
         }
-        console.log(this.drillZoom, curZoom);
-        if(this.drillZoom >= curZoom){
-          if ((this.curLevel === 3 && curZoom < 8) || (this.curLevel === 2 && curZoom < 7) || (this.curLevel === 1 && curZoom < 6)) {
-            this.drillUp();
-          }
+        if (this.drillZoom[this.drillZoom.length - 1] > curZoom) {
+          this.drillUp();
         }
       });
     },
@@ -119,7 +116,6 @@
         map.regionGroup[group] = layergroup;
       },
       drill(data, region) {
-        this.removeGroup(this.map.regionGroup);
         if (this.curLevel === 0) {
           // 全国 => 省
           this.curLevel = 1;
@@ -136,12 +132,17 @@
         } else if (this.curLevel === 2) {
           this.curLevel = 3;
           this.showTile();
+        } else if (this.curLevel === 3) {
+          return;
         }
+        this.removeGroup(this.map.regionGroup);
         this.drillDown(data, this.curLevel);
         this.fitBounds(region);
       },
       drillDown(data, level) {
-        this.drillZoom = this.map.getZoom();
+        if (this.drillZoom[this.drillZoom.length - 1] !== this.map.getZoom()) {
+          this.drillZoom.push(this.map.getZoom());
+        }
         let group = {};
         if (level === 1) {
           group = {
@@ -194,6 +195,7 @@
           });
       },
       drillUp() {
+        this.drillZoom.pop(this.drillZoom.length - 1);
         let level = this.curLevel;
         if (level === 0) return;
         this.removeGroup(this.map.regionGroup);

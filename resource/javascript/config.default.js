@@ -16,7 +16,7 @@ export const baseConfig = {
   citiesMarkerNameColor: '#fff', // 默认：#fff
   citiesMarkerCircleColor: '#fff', // 默认：#fff
   hoverColor: '#00FFFE', // 默认：#00FFFE
-  mapFromLevel: 1, // 0 省 => 地图； 1 市 => 地图；2 县 => 地图
+  mapFromLevel: 2, // 0 省 => 地图； 1 市 => 地图；2 县 => 地图
   map: {
     level: 5,
     center: '104.051711, 37.46694'
