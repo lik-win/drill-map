@@ -262,7 +262,7 @@
       async getLocation(city, address) {
         let url = '/api/geocoder/v2/';
         let params = {
-          ak: 'xlbBFeF4xY3v9wbLNSPRqMFYvggSU7Mu',
+          ak: 'LyRXDEGBixFCj7wyGl1ZE053',
           output: 'json',
           city: city,
           address: address
