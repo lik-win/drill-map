@@ -262,7 +262,7 @@
       async getLocation(city, address) {
         let url = '/api/geocoder/v2/';
         let params = {
-          ak: 'LyRXDEGBixFCj7wyGl1ZE053',
+          ak: baseConfig.baiduAk,
           output: 'json',
           city: city,
           address: address
@@ -313,27 +313,6 @@
     }
   };
 </script>
-<style lang="less">
-  #LeafletMap {
-    background-color: #1c2431;
-    z-index: 990;
-  }
-
-  .my-div-icon {
-    width: 50px !important;
-    height: 53px !important;
-    text-align: center;
-    color: #fff;
-    .name {
-      font-weight: bold;
-    }
-    .circle {
-      display: block;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      margin: 0 auto;
-      background: #fff;
-    }
-  }
+<style>
+  @import "../../resource/stylesheets/leaflet.css";
 </style>

@@ -73,8 +73,8 @@ export const createDomMarker = function (className, data) {
   var marker = L.divIcon({
     className: `my-div-icon ${className}`,
     html: `<div>
-            <span class="circle" style="background: ${baseConfig.citiesMarkerCircleColor}"></span>
-            <span class="name" style="color: ${baseConfig.citiesMarkerNameColor}">${data.name}</span>
+            <span class="leaflet-city-circle"></span>
+            <span class="leaflet-city-name">${data.name}</span>
           </div>`,
     iconAnchor: [25, 3]
   });
